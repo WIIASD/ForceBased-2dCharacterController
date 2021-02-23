@@ -893,12 +893,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c34adcad87ee284d81b27a0e1faab1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jumpPressed: 0
-  jumpReleased: 0
   speedModifier: 120
   jumpStrength: 13
   basicJumpStrength: 3
   timeToReachJumpApex: 0.2
+  isJumping: 0
+  apexReached: 0
+  wallJumpDirection: 0
 --- !u!50 &1892216687
 Rigidbody2D:
   serializedVersion: 4
@@ -1005,7 +1006,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1892216685}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.92, y: -1.3, z: 0}
+  m_LocalPosition: {x: -3.37, y: -2.05, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -1023,11 +1024,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f7dfb828d1cf334eaed42cf9bb77272, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  grounded: 0
-  walled: 0
-  wallJumpDirection: 0
-  isJumping: 0
-  apexReached: 0
 --- !u!1 &1907515450
 GameObject:
   m_ObjectHideFlags: 0

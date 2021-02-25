@@ -16,7 +16,8 @@ public class Controller2D : MonoBehaviour
         public Vector3 TopLeft, TopRight, BottomLeft, BottomRight;
     }
     [SerializeField] private float rayLength = 0.1f;
-    [SerializeField] private int rayCount = 8;
+    [SerializeField] private int horizontalRayCount = 8;
+    [SerializeField] private int verticalRayCount = 8;
     [SerializeField] private float speedModifier = 3f;
     [SerializeField] private float jumpStrength = 15f;
     [SerializeField] private float basicJumpStrength = 3f;
@@ -25,15 +26,19 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private float wallJumpVerticalStrength = 10f;
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField] private bool isGrounded;
+    [SerializeField] private bool isCeilinged;
+    [SerializeField] private bool isLeftWalled;
+    [SerializeField] private bool isRightWalled;
     [SerializeField] private LayerMask groundLayerMask;
     [SerializeField] private List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
     private RaycastOrigins raycastOrigins;
+    private float horizontalRaySeperationDistance;
+    private float verticalRaySeperationDistance;
     private int jumpPhysicFrameCount = 0;
     private float jumpW;
     private bool isJumping;
     private bool apexReached;
-    private float raySperationDistance;
     private Player player;
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
@@ -44,7 +49,7 @@ public class Controller2D : MonoBehaviour
         boxCollider = GetComponent<BoxCollider2D>();
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
-        raySperationDistance = CalculateRaySperationDistance();
+        CalculateRaySperationDistance();
         jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
     }
 
@@ -63,39 +68,45 @@ public class Controller2D : MonoBehaviour
 
     private void CastHorizontalRays()
     {
+        for (int i = 0; i < horizontalRayCount; i++)
+        {
+            Vector3 direction = Vector3.left;
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x, 
+                                            raycastOrigins.TopLeft.y - i * horizontalRaySeperationDistance, raycastOrigins.TopLeft.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
+            isLeftWalled = (hit && hit.normal.x > 0.8f) ? true : false;
+            Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
+        }
 
+        for (int i = 0; i < horizontalRayCount; i++)
+        {
+            Vector3 direction = Vector3.right;
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopRight.x,
+                                            raycastOrigins.TopRight.y - i * horizontalRaySeperationDistance, raycastOrigins.TopRight.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
+            isRightWalled = (hit && hit.normal.x < -0.8f) ? true : false;
+            Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
+        }
     }
     private void CastVerticalRays()
     {
         //casting downwards
-        for (int i = 0; i < rayCount; i++)
+        for (int i = 0; i < verticalRayCount; i++)
         {
-            Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * raySperationDistance, raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, rayLength + skinWidth, groundLayerMask);
-            if (hit && hit.normal.y > 0.5f)
-            {
-                isGrounded = true;
-            }
-            else
-            {
-                isGrounded = false;
-            }
-            Debug.DrawRay(newOrigin, Vector3.down * (rayLength + skinWidth), Color.green);
+            Vector3 direcion = Vector3.down;
+            Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * verticalRaySeperationDistance, raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
+            isGrounded = (hit && hit.normal.y > 0.5f) ? true : false;
+            Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
         }
         //casting upwards
-        for (int i = 0; i < rayCount; i++)
+        for (int i = 0; i < verticalRayCount; i++)
         {
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * raySperationDistance, raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, rayLength + skinWidth, groundLayerMask);
-            if (hit && hit.normal.y > 0.5f)
-            {
-                isGrounded = true;
-            }
-            else
-            {
-                isGrounded = false;
-            }
-            Debug.DrawRay(newOrigin, Vector3.up * (rayLength + skinWidth), Color.green);
+            Vector3 direcion = Vector3.up;
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance, raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
+            isCeilinged = (hit && hit.normal.y < -0.5f) ? true : false;
+            Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
         }
     }
 
@@ -106,9 +117,10 @@ public class Controller2D : MonoBehaviour
         raycastOrigins.BottomLeft = new Vector3(boxCollider.bounds.min.x + skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
         raycastOrigins.BottomRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
     }
-    private float CalculateRaySperationDistance()
+    private void CalculateRaySperationDistance()
     {
-        return (boxCollider.bounds.size.x - skinWidth * 2) / (rayCount - 1);
+        horizontalRaySeperationDistance = (boxCollider.bounds.size.y - skinWidth * 2) / (verticalRayCount - 1);
+        verticalRaySeperationDistance = (boxCollider.bounds.size.x - skinWidth * 2) / (horizontalRayCount - 1);
     }
 
     public bool IsOnGround()

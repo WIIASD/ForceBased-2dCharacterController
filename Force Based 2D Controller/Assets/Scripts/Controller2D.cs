@@ -2,41 +2,42 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(BoxCollider2D))]
-[RequireComponent(typeof(Rigidbody2D))]
-[RequireComponent(typeof(Player))]
 
 /// <summary>
 /// Learned from GDC: https://youtu.be/YDwp5tNCKso for the force calculation part
 /// </summary>
+[RequireComponent(typeof(BoxCollider2D))]
+[RequireComponent(typeof(Rigidbody2D))]
+[RequireComponent(typeof(Player))]
 public class Controller2D : MonoBehaviour
 {
-    public float SpeedModifier = 3f;
-    public float JumpStrength = 15f;
-    public float BasicJumpStrength = 3f;
-    public float TimeToReachJumpApex = 0.2f;
-    public float WallJumpHorizontalStrength = 4f;
-    public float WallJumpVerticalStrength = 10f;
-    public float SkinWidth = 0.02f;
-    public int RayCount = 5;
-    public float RayLength = 1f;
+    public struct RaycastOrigins
+    {
+        public Vector3 TopLeft, TopRight, BottomLeft, BottomRight;
+    }
+    [SerializeField] private float rayLength = 0.1f;
+    [SerializeField] private int rayCount = 8;
+    [SerializeField] private float speedModifier = 3f;
+    [SerializeField] private float jumpStrength = 15f;
+    [SerializeField] private float basicJumpStrength = 3f;
+    [SerializeField] private float timeToReachJumpApex = 0.2f;
+    [SerializeField] private float wallJumpHorizontalStrength = 4f;
+    [SerializeField] private float wallJumpVerticalStrength = 10f;
+    [SerializeField] private float skinWidth = 0.02f;
+    [SerializeField] private bool isGrounded;
+    [SerializeField] private LayerMask groundLayerMask;
+    [SerializeField] private List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
-    [SerializeField]
-    private bool isGrounded;
+    private RaycastOrigins raycastOrigins;
+    private int jumpPhysicFrameCount = 0;
+    private float jumpW;
     private bool isJumping;
     private bool apexReached;
-    private int jumpBoost = 0;
-    private float jumpW;
     private float raySperationDistance;
     private Player player;
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
 
-    [SerializeField]
-    private LayerMask groundLayerMask;
-   
-    [SerializeField]
-    List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
     private void Start()
     {
@@ -44,12 +45,14 @@ public class Controller2D : MonoBehaviour
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
         raySperationDistance = CalculateRaySperationDistance();
-        jumpW = (Mathf.PI / 2) / (TimeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
+        jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
     }
 
     private void Update()
     {
+        CalculateRaycastOrigins();
         CastVerticalRays();
+        CastHorizontalRays();
     }
 
     private void FixedUpdate()
@@ -58,50 +61,78 @@ public class Controller2D : MonoBehaviour
         HandleJump();
     }
 
+    private void CastHorizontalRays()
+    {
+
+    }
     private void CastVerticalRays()
     {
-        Vector3 origin = new Vector3(boxCollider.bounds.min.x, boxCollider.bounds.min.y + SkinWidth, 0);
-        for (int i = 0; i<RayCount; i++)
+        //casting downwards
+        for (int i = 0; i < rayCount; i++)
         {
-            Vector3 newOrigin = new Vector3(origin.x + i * raySperationDistance, origin.y, origin.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, RayLength + SkinWidth, groundLayerMask);
+            Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * raySperationDistance, raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, rayLength + skinWidth, groundLayerMask);
             if (hit && hit.normal.y > 0.5f)
             {
                 isGrounded = true;
-                Debug.Log(hit.normal.y);
             }
             else
             {
                 isGrounded = false;
             }
-            Debug.DrawRay(newOrigin, Vector3.down * RayLength, Color.green);
+            Debug.DrawRay(newOrigin, Vector3.down * (rayLength + skinWidth), Color.green);
+        }
+        //casting upwards
+        for (int i = 0; i < rayCount; i++)
+        {
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * raySperationDistance, raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, rayLength + skinWidth, groundLayerMask);
+            if (hit && hit.normal.y > 0.5f)
+            {
+                isGrounded = true;
+            }
+            else
+            {
+                isGrounded = false;
+            }
+            Debug.DrawRay(newOrigin, Vector3.up * (rayLength + skinWidth), Color.green);
         }
     }
 
+    private void CalculateRaycastOrigins()
+    {
+        raycastOrigins.TopLeft = new Vector3(boxCollider.bounds.min.x + skinWidth, boxCollider.bounds.max.y - skinWidth, 0);
+        raycastOrigins.TopRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.max.y - skinWidth, 0);
+        raycastOrigins.BottomLeft = new Vector3(boxCollider.bounds.min.x + skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
+        raycastOrigins.BottomRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
+    }
     private float CalculateRaySperationDistance()
     {
-        return (boxCollider.bounds.size.x) / (RayCount-1);
+        return (boxCollider.bounds.size.x - skinWidth * 2) / (rayCount - 1);
     }
 
-    public bool IsOnGround(){
+    public bool IsOnGround()
+    {
         return colliderStandedOn.Count < 1 ? false : true;
     }
 
-    public bool IsWalledLeft(){
+    public bool IsWalledLeft()
+    {
         return colliderWalledLeft.Count < 1 ? false : true;
     }
 
-    public bool IsWalledRight(){
+    public bool IsWalledRight()
+    {
         return colliderWalledRight.Count < 1 ? false : true;
     }
 
     public int GetWallJumpDirection()
     {
-        if (colliderStandedOn.Count != 0) 
+        if (colliderStandedOn.Count != 0)
         {
             return 0;
         }
-        if (colliderWalledLeft.Count != 0) 
+        if (colliderWalledLeft.Count != 0)
         {
             return 1;
         }
@@ -112,31 +143,34 @@ public class Controller2D : MonoBehaviour
         return 0;
     }
 
-    public void Jump(){
-        
-        if(!IsOnGround() && !IsWalledRight() && !IsWalledLeft()){//before jump
+    public void Jump()
+    {
+
+        if (!IsOnGround() && !IsWalledRight() && !IsWalledLeft())
+        {
             return;
-        }
+        }//before jump
 
         int wallJumpDirection = GetWallJumpDirection();
 
-        if (wallJumpDirection == 0) //normal jump
+        if (wallJumpDirection == 0)
         {
-            rb2d.velocity = new Vector2(rb2d.velocity.x, BasicJumpStrength);
+            rb2d.velocity = new Vector2(rb2d.velocity.x, basicJumpStrength);
             isJumping = true;
-        }
+        }//normal jump
         else
         {
-            rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * WallJumpHorizontalStrength, rb2d.velocity.y / 2 + WallJumpVerticalStrength);
+            rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalStrength, rb2d.velocity.y / 2 + wallJumpVerticalStrength);
             isJumping = true;
-        }
-        
+        }//wall jump
+
     }
 
-    public void StopJump(){
+    public void StopJump()
+    {
         isJumping = false;
         apexReached = false;
-        jumpBoost = 0;
+        jumpPhysicFrameCount = 0;
     }
 
     /// <summary>
@@ -144,7 +178,7 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     void HandleMove()
     {
-        Vector2 force = new Vector2(SpeedModifier * player.horaxis * rb2d.mass, 0);
+        Vector2 force = new Vector2(speedModifier * player.horaxis * rb2d.mass, 0);
         rb2d.AddForce(force);
     }
     /// <summary>
@@ -156,8 +190,8 @@ public class Controller2D : MonoBehaviour
         {
             //this is an counter that keep track of the time in air in every FixedUpdate frames (0.02s)
             //will be reset after landing
-            jumpBoost++;
-            float C = Mathf.Cos(jumpW * jumpBoost);
+            jumpPhysicFrameCount++;
+            float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
             if (C < 0f)
             {
                 apexReached = true;
@@ -165,7 +199,7 @@ public class Controller2D : MonoBehaviour
             }
             else
             {
-                rb2d.velocity += new Vector2(0f, C * JumpStrength);
+                rb2d.velocity += new Vector2(0f, C * jumpStrength);
             }
         }
     }
@@ -180,7 +214,8 @@ public class Controller2D : MonoBehaviour
     {
         ContactPoint2D contactPoint = other.GetContact(0);
 
-        if (other.collider.CompareTag("Ground")) {
+        if (other.collider.CompareTag("Ground"))
+        {
 
             if (contactPoint.normal.y > 0.5f) //ground
             {
@@ -200,7 +235,7 @@ public class Controller2D : MonoBehaviour
                 colliderWalledRight.Add(contactPoint.collider);
             }
         }
-        
+
     }
 
     private void OnCollisionExit2D(Collision2D other)

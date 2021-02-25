@@ -1443,15 +1443,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c34adcad87ee284d81b27a0e1faab1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SpeedModifier: 120
-  JumpStrength: 15
-  BasicJumpStrength: 3
-  TimeToReachJumpApex: 0.2
-  WallJumpHorizontalStrength: 20
-  WallJumpVerticalStrength: 10
-  SkinWidth: 0.02
-  RayCount: 8
-  RayLength: 0.1
+  rayLength: 0.1
+  rayCount: 8
+  speedModifier: 120
+  jumpStrength: 15
+  basicJumpStrength: 3
+  timeToReachJumpApex: 0.2
+  wallJumpHorizontalStrength: 20
+  wallJumpVerticalStrength: 10
+  skinWidth: 0.02
   isGrounded: 0
   groundLayerMask:
     serializedVersion: 2

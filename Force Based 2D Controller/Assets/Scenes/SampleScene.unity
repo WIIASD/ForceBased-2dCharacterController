@@ -543,9 +543,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1147511484}
   - component: {fileID: 1147511483}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Grid
-  m_TagString: Ground
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1443,14 +1443,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c34adcad87ee284d81b27a0e1faab1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isGrounded: 0
   speedModifier: 120
   jumpStrength: 13
   basicJumpStrength: 3
+  timeToReachJumpApex: 0.2
   wallJumpHorizontalStrength: 20
   wallJumpVerticalStrength: 10
-  timeToReachJumpApex: 0.2
+  skinWidth: 0.02
+  rayCount: 8
+  rayLength: 0.1
   isJumping: 0
   apexReached: 0
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
   colliderStandedOn: []
   colliderWalledLeft: []
   colliderWalledRight: []

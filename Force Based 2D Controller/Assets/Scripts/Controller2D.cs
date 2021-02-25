@@ -11,20 +11,30 @@ using UnityEngine;
 /// </summary>
 public class Controller2D : MonoBehaviour
 {
+    public bool isGrounded;
     public float speedModifier = 3f;
     public float jumpStrength = 15f;
     public float basicJumpStrength = 3f;
+    public float timeToReachJumpApex = 0.2f;
     public float wallJumpHorizontalStrength = 4f;
     public float wallJumpVerticalStrength = 10f;
-    public float timeToReachJumpApex = 0.2f;
+    public float skinWidth = 0.02f;
+    public int rayCount = 5;
+    public float rayLength = 1f;
     public bool isJumping = false;
     public bool apexReached = false;
 
     private int jumpBoost = 0;
     private float jumpW;
+    private float raySperationDistance;
     private Player player;
     
-    BoxCollider2D boxCollider;
+    private BoxCollider2D boxCollider;
+    private Rigidbody2D rb2d;
+
+    [SerializeField]
+
+    private LayerMask groundLayerMask;
 
     [SerializeField]
 
@@ -38,24 +48,50 @@ public class Controller2D : MonoBehaviour
 
     List<Collider2D> colliderWalledRight = new List<Collider2D>();
 
-    Rigidbody2D rb2d;
 
     private void Start()
     {
         boxCollider = GetComponent<BoxCollider2D>();
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
+        raySperationDistance = CalculateRaySperationDistance();
         jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
     }
 
     private void Update()
     {
+        CastVerticalRays();
     }
 
     private void FixedUpdate()
     {
         HandleMove();
         HandleJump();
+    }
+
+    private void CastVerticalRays()
+    {
+        Vector3 origin = new Vector3(boxCollider.bounds.min.x, boxCollider.bounds.min.y + skinWidth, 0);
+        for (int i = 0; i<rayCount; i++)
+        {
+            Vector3 newOrigin = new Vector3(origin.x + i * raySperationDistance, origin.y, origin.z);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, rayLength + skinWidth, groundLayerMask);
+            if (hit && hit.normal.y > 0.5f)
+            {
+                isGrounded = true;
+                Debug.Log(hit.normal.y);
+            }
+            else
+            {
+                isGrounded = false;
+            }
+            Debug.DrawRay(newOrigin, Vector3.down * rayLength, Color.green);
+        }
+    }
+
+    private float CalculateRaySperationDistance()
+    {
+        return (boxCollider.bounds.size.x) / (rayCount-1);
     }
 
     public bool IsGrounded(){
@@ -217,7 +253,7 @@ public class Controller2D : MonoBehaviour
     private void OnCollisionStay2D(Collision2D other)
     {
         ContactPoint2D contactPoint = other.GetContact(0);
-        Debug.Log(contactPoint.normal.y);
+        //Debug.Log(contactPoint.normal.y);
         if (Mathf.Abs(contactPoint.normal.x) < 0.8 &&
             (colliderWalledLeft.Contains(other.collider) || colliderWalledRight.Contains(other.collider)))
         {

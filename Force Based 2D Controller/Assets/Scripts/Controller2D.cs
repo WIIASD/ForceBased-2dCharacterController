@@ -14,10 +14,11 @@ public class Controller2D : MonoBehaviour
     public float speedModifier = 3f;
     public float jumpStrength = 15f;
     public float basicJumpStrength = 3f;
+    public float wallJumpHorizontalStrength = 4f;
+    public float wallJumpVerticalStrength = 10f;
     public float timeToReachJumpApex = 0.2f;
     public bool isJumping = false;
     public bool apexReached = false;
-    public int wallJumpDirection;
 
     private int jumpBoost = 0;
     private float jumpW;
@@ -69,14 +70,42 @@ public class Controller2D : MonoBehaviour
         return colliderWalledRight.Count < 1 ? false : true;
     }
 
+    public int GetWallJumpDirection()
+    {
+        if (colliderStandedOn.Count != 0) 
+        {
+            return 0;
+        }
+        if (colliderWalledLeft.Count != 0) 
+        {
+            return 1;
+        }
+        if (colliderWalledRight.Count != 0)
+        {
+            return -1;
+        }
+        return 0;
+    }
+
     public void Jump(){
         
-        if(!IsGrounded()){//before jump
+        if(!IsGrounded() && !IsWalledRight() && !IsWalledLeft()){//before jump
             return;
         }
 
-        rb2d.velocity = new Vector2(rb2d.velocity.x, basicJumpStrength);
-        isJumping = true;
+        int wallJumpDirection = GetWallJumpDirection();
+
+        if (wallJumpDirection == 0) //normal jump
+        {
+            rb2d.velocity = new Vector2(rb2d.velocity.x, basicJumpStrength);
+            isJumping = true;
+        }
+        else
+        {
+            rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalStrength, rb2d.velocity.y / 2 + wallJumpVerticalStrength);
+            isJumping = true;
+        }
+        
     }
 
     public void StopJump(){
@@ -130,22 +159,20 @@ public class Controller2D : MonoBehaviour
 
             if (contactPoint.normal.y > 0.5f) //ground
             {
-                contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
+                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
                 colliderStandedOn.Add(contactPoint.collider);
             }
 
             if (contactPoint.normal.x > 0.8f)//left wall
             {
-                contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.green;
+                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.green;
                 colliderWalledLeft.Add(contactPoint.collider);
-                wallJumpDirection = 1;
             }
 
             if (contactPoint.normal.x < -0.8f)//right wall
             {
-                contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.blue;
+                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.blue;
                 colliderWalledRight.Add(contactPoint.collider);
-                wallJumpDirection = -1;
             }
         }
         
@@ -158,7 +185,7 @@ public class Controller2D : MonoBehaviour
         {
             if (colliderStandedOn.Contains(other.collider))
             {
-                other.collider.GetComponent<SpriteRenderer>().color = Color.white;
+                //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
                 colliderStandedOn.Remove(other.collider);
             }
         }
@@ -167,9 +194,8 @@ public class Controller2D : MonoBehaviour
         {
             if (colliderWalledLeft.Contains(other.collider))
             {
-                other.collider.GetComponent<SpriteRenderer>().color = Color.white;
+                //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
                 colliderWalledLeft.Remove(other.collider);
-                wallJumpDirection = 0;
             }
         }
 
@@ -177,17 +203,21 @@ public class Controller2D : MonoBehaviour
         {
             if (colliderWalledRight.Contains(other.collider))
             {
-                other.collider.GetComponent<SpriteRenderer>().color = Color.white;
+                //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
                 colliderWalledRight.Remove(other.collider);
-                wallJumpDirection = 0;
             }
         }
 
     }
 
+    /// <summary>
+    /// To double check if there are unexpected colliders that the player is not colliding with in the collider arrays 
+    /// </summary>
+    /// <param name="other"></param>
     private void OnCollisionStay2D(Collision2D other)
     {
         ContactPoint2D contactPoint = other.GetContact(0);
+        Debug.Log(contactPoint.normal.y);
         if (Mathf.Abs(contactPoint.normal.x) < 0.8 &&
             (colliderWalledLeft.Contains(other.collider) || colliderWalledRight.Contains(other.collider)))
         {
@@ -196,7 +226,7 @@ public class Controller2D : MonoBehaviour
             if (contactPoint.normal.y > 0.5)
             {
                 colliderStandedOn.Add(other.collider);
-                contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
+                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
             }
         }
     }

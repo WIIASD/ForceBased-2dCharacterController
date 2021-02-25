@@ -11,43 +11,32 @@ using UnityEngine;
 /// </summary>
 public class Controller2D : MonoBehaviour
 {
-    public bool isGrounded;
-    public float speedModifier = 3f;
-    public float jumpStrength = 15f;
-    public float basicJumpStrength = 3f;
-    public float timeToReachJumpApex = 0.2f;
-    public float wallJumpHorizontalStrength = 4f;
-    public float wallJumpVerticalStrength = 10f;
-    public float skinWidth = 0.02f;
-    public int rayCount = 5;
-    public float rayLength = 1f;
-    public bool isJumping = false;
-    public bool apexReached = false;
+    public float SpeedModifier = 3f;
+    public float JumpStrength = 15f;
+    public float BasicJumpStrength = 3f;
+    public float TimeToReachJumpApex = 0.2f;
+    public float WallJumpHorizontalStrength = 4f;
+    public float WallJumpVerticalStrength = 10f;
+    public float SkinWidth = 0.02f;
+    public int RayCount = 5;
+    public float RayLength = 1f;
 
+    [SerializeField]
+    private bool isGrounded;
+    private bool isJumping;
+    private bool apexReached;
     private int jumpBoost = 0;
     private float jumpW;
     private float raySperationDistance;
     private Player player;
-    
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
 
     [SerializeField]
-
     private LayerMask groundLayerMask;
-
+   
     [SerializeField]
-
-    List<Collider2D> colliderStandedOn = new List<Collider2D>();
-
-    [SerializeField]
-
-    List<Collider2D> colliderWalledLeft = new List<Collider2D>();
-
-    [SerializeField]
-
-    List<Collider2D> colliderWalledRight = new List<Collider2D>();
-
+    List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
     private void Start()
     {
@@ -55,7 +44,7 @@ public class Controller2D : MonoBehaviour
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
         raySperationDistance = CalculateRaySperationDistance();
-        jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
+        jumpW = (Mathf.PI / 2) / (TimeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
     }
 
     private void Update()
@@ -71,11 +60,11 @@ public class Controller2D : MonoBehaviour
 
     private void CastVerticalRays()
     {
-        Vector3 origin = new Vector3(boxCollider.bounds.min.x, boxCollider.bounds.min.y + skinWidth, 0);
-        for (int i = 0; i<rayCount; i++)
+        Vector3 origin = new Vector3(boxCollider.bounds.min.x, boxCollider.bounds.min.y + SkinWidth, 0);
+        for (int i = 0; i<RayCount; i++)
         {
             Vector3 newOrigin = new Vector3(origin.x + i * raySperationDistance, origin.y, origin.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, rayLength + skinWidth, groundLayerMask);
+            RaycastHit2D hit = Physics2D.Raycast(newOrigin, Vector3.down, RayLength + SkinWidth, groundLayerMask);
             if (hit && hit.normal.y > 0.5f)
             {
                 isGrounded = true;
@@ -85,16 +74,16 @@ public class Controller2D : MonoBehaviour
             {
                 isGrounded = false;
             }
-            Debug.DrawRay(newOrigin, Vector3.down * rayLength, Color.green);
+            Debug.DrawRay(newOrigin, Vector3.down * RayLength, Color.green);
         }
     }
 
     private float CalculateRaySperationDistance()
     {
-        return (boxCollider.bounds.size.x) / (rayCount-1);
+        return (boxCollider.bounds.size.x) / (RayCount-1);
     }
 
-    public bool IsGrounded(){
+    public bool IsOnGround(){
         return colliderStandedOn.Count < 1 ? false : true;
     }
 
@@ -125,7 +114,7 @@ public class Controller2D : MonoBehaviour
 
     public void Jump(){
         
-        if(!IsGrounded() && !IsWalledRight() && !IsWalledLeft()){//before jump
+        if(!IsOnGround() && !IsWalledRight() && !IsWalledLeft()){//before jump
             return;
         }
 
@@ -133,12 +122,12 @@ public class Controller2D : MonoBehaviour
 
         if (wallJumpDirection == 0) //normal jump
         {
-            rb2d.velocity = new Vector2(rb2d.velocity.x, basicJumpStrength);
+            rb2d.velocity = new Vector2(rb2d.velocity.x, BasicJumpStrength);
             isJumping = true;
         }
         else
         {
-            rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalStrength, rb2d.velocity.y / 2 + wallJumpVerticalStrength);
+            rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * WallJumpHorizontalStrength, rb2d.velocity.y / 2 + WallJumpVerticalStrength);
             isJumping = true;
         }
         
@@ -155,7 +144,7 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     void HandleMove()
     {
-        Vector2 force = new Vector2(speedModifier * player.horaxis * rb2d.mass, 0);
+        Vector2 force = new Vector2(SpeedModifier * player.horaxis * rb2d.mass, 0);
         rb2d.AddForce(force);
     }
     /// <summary>
@@ -176,7 +165,7 @@ public class Controller2D : MonoBehaviour
             }
             else
             {
-                rb2d.velocity += new Vector2(0f, C * jumpStrength);
+                rb2d.velocity += new Vector2(0f, C * JumpStrength);
             }
         }
     }

@@ -20,15 +20,19 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private int verticalRayCount = 8;
     [SerializeField] private float speedModifier = 3f;
     [SerializeField] private float jumpStrength = 15f;
-    [SerializeField] private float basicJumpStrength = 3f;
+    [SerializeField] private float normalJumpInitialVelocity = 3f;
     [SerializeField] private float timeToReachJumpApex = 0.2f;
-    [SerializeField] private float wallJumpHorizontalStrength = 4f;
-    [SerializeField] private float wallJumpVerticalStrength = 10f;
+    [SerializeField] private float wallJumpHorizontalInitialVelocity = 4f;
+    [SerializeField] private float wallJumpVerticalInitialVelocity = 10f;
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField] private bool isGrounded;
     [SerializeField] private bool isCeilinged;
     [SerializeField] private bool isLeftWalled;
     [SerializeField] private bool isRightWalled;
+    [SerializeField] private bool wasGrounded;
+    [SerializeField] private bool wasCeilinged;
+    [SerializeField] private bool wasLeftWalled;
+    [SerializeField] private bool wasRightWalled;
     [SerializeField] private LayerMask groundLayerMask;
     [SerializeField] private List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
@@ -50,14 +54,11 @@ public class Controller2D : MonoBehaviour
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
         CalculateRaySperationDistance();
-        jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
     }
 
     private void Update()
     {
-        CalculateRaycastOrigins();
-        CastVerticalRays();
-        CastHorizontalRays();
+        CastRays();
     }
 
     private void FixedUpdate()
@@ -66,10 +67,26 @@ public class Controller2D : MonoBehaviour
         HandleJump();
     }
 
+    /// <summary>
+    /// Calculate the origins and seperation distances of raycast and cast rays Horizontally and Vertically
+    /// </summary>
+    private void CastRays()
+    {
+        CalculateRaycastOrigins();
+        CastVerticalRays();
+        CastHorizontalRays();
+    }
+
+    /// <summary>
+    /// Cast rays horizontally to check if the character is touching the left or the right wall
+    /// </summary>
     private void CastHorizontalRays()
     {
         int hittedRays = 0;
-        //cast rightward
+        wasLeftWalled = isLeftWalled;
+        wasRightWalled = isRightWalled;
+
+        //cast leftward
         for (int i = 0; i < horizontalRayCount; i++)
         {
             Vector3 direction = Vector3.left;
@@ -81,7 +98,8 @@ public class Controller2D : MonoBehaviour
         }
         isLeftWalled = hittedRays > 0 ? true : false;
         hittedRays = 0;
-        //cast leftward
+
+        //cast rightward
         for (int i = 0; i < horizontalRayCount; i++)
         {
             Vector3 direction = Vector3.right;
@@ -92,31 +110,77 @@ public class Controller2D : MonoBehaviour
             Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
         }
         isRightWalled = hittedRays > 0 ? true : false;
+
+        //Call corresponding events
+        if (!wasLeftWalled && isLeftWalled)
+        {
+            OnLeftWallEvent();
+        }
+        if (!wasRightWalled && isRightWalled)
+        {
+            OnRightWallEvent();
+        }
+        if (wasLeftWalled && !isLeftWalled)
+        {
+            LeftLeftWallEvent();
+        }
+        if(wasRightWalled && !isRightWalled)
+        {
+            LeftRightWallEvent();
+        }
     }
+
+    /// <summary>
+    /// Cast rays vertically to check if the character is touching the ground or the ceiling
+    /// </summary>
     private void CastVerticalRays()
     {
         int hittedRays = 0;
+        wasGrounded = isGrounded;
+        wasCeilinged = isCeilinged;
+
         //casting downwards
         for (int i = 0; i < verticalRayCount; i++)
         {
             Vector3 direcion = Vector3.down;
-            Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * verticalRaySeperationDistance, raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
+            Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * verticalRaySeperationDistance,
+                                            raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
-            hittedRays = (hit && hit.normal.y > 0.5f) ? 1 : 0;
+            hittedRays += (hit && hit.normal.y > 0.5f) ? 1 : 0;
             Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
         }
         isGrounded = hittedRays > 0 ? true : false;
         hittedRays = 0;
+
         //casting upwards
         for (int i = 0; i < verticalRayCount; i++)
         {
             Vector3 direcion = Vector3.up;
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance, raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance, 
+                                            raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
             hittedRays += (hit && hit.normal.y < -0.5f) ? 1 : 0;
             Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
         }
         isCeilinged = hittedRays > 0 ? true : false;
+
+        //Call corresponding events
+        if (!wasGrounded && isGrounded)
+        {
+            OnGroundEvent();
+        }
+        if (!wasCeilinged && isCeilinged)
+        {
+            OnCeilingEvent();
+        }
+        if(wasGrounded && !isGrounded)
+        {
+            LeftGroundEvent();
+        }
+        if(wasCeilinged && !isCeilinged)
+        {
+            LeftCeilingEvent();
+        }
     }
 
     private void CalculateRaycastOrigins()
@@ -126,48 +190,81 @@ public class Controller2D : MonoBehaviour
         raycastOrigins.BottomLeft = new Vector3(boxCollider.bounds.min.x + skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
         raycastOrigins.BottomRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
     }
+
     private void CalculateRaySperationDistance()
     {
         horizontalRaySeperationDistance = (boxCollider.bounds.size.y - skinWidth * 2) / (verticalRayCount - 1);
         verticalRaySeperationDistance = (boxCollider.bounds.size.x - skinWidth * 2) / (horizontalRayCount - 1);
     }
 
-    public bool IsOnGround()
+    private void OnGroundEvent()
     {
-        return colliderStandedOn.Count < 1 ? false : true;
+        Debug.Log("Grounded!!");
     }
 
-    public bool IsWalledLeft()
+    private void LeftGroundEvent()
     {
-        return colliderWalledLeft.Count < 1 ? false : true;
+        Debug.Log("Left Ground!!");
     }
 
-    public bool IsWalledRight()
+    private void OnCeilingEvent()
     {
-        return colliderWalledRight.Count < 1 ? false : true;
+        Debug.Log("Ceilinged!!");
     }
 
+    private void LeftCeilingEvent()
+    {
+        Debug.Log("Left Ceiling!!");
+    }
+
+    private void OnLeftWallEvent()
+    {
+        Debug.Log("LeftWalled!!");
+    }
+
+    private void LeftLeftWallEvent()
+    {
+        Debug.Log("Left Left Wall!!");
+    }
+
+    private void OnRightWallEvent()
+    {
+        Debug.Log("RightWalled!!");
+    }
+
+    private void LeftRightWallEvent()
+    {
+        Debug.Log("Left Right Wall!!");
+    }
+
+    /// <summary>
+    /// Return the direction of walljumping. 0 means cannot walljump, -1 means to the left, and 1 means to the right
+    /// </summary>
+    /// <returns></returns>
     public int GetWallJumpDirection()
     {
-        if (colliderStandedOn.Count != 0)
+        if (isGrounded)
         {
             return 0;
         }
-        if (colliderWalledLeft.Count != 0)
+        if (isLeftWalled)
         {
             return 1;
         }
-        if (colliderWalledRight.Count != 0)
+        if (isRightWalled)
         {
             return -1;
         }
         return 0;
     }
 
+    /// <summary>
+    /// Check the jump condition, if canJump, preform a jump.
+    /// </summary>
     public void Jump()
     {
 
-        if (!IsOnGround() && !IsWalledRight() && !IsWalledLeft())
+        if (!isGrounded && !isRightWalled && !isLeftWalled)
         {//before jump
             return;
         }
@@ -176,17 +273,21 @@ public class Controller2D : MonoBehaviour
 
         if (wallJumpDirection == 0)
         {//normal jump
-            rb2d.velocity = new Vector2(rb2d.velocity.x, basicJumpStrength);
+            rb2d.velocity = new Vector3(rb2d.velocity.x, normalJumpInitialVelocity, 0);
             isJumping = true;
         }
         else
         {//wall jump
-            rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalStrength, rb2d.velocity.y / 2 + wallJumpVerticalStrength);
+            rb2d.velocity = new Vector3(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalInitialVelocity,
+                                        rb2d.velocity.y / 2 + wallJumpVerticalInitialVelocity, 0);
             isJumping = true;
         }
 
     }
 
+    /// <summary>
+    /// Stop the jumping immediately in the mid-air
+    /// </summary>
     public void StopJump()
     {
         isJumping = false;
@@ -199,9 +300,11 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     void HandleMove()
     {
-        Vector2 force = new Vector2(speedModifier * player.horaxis * rb2d.mass, 0);
+        float horizontalInput = player.horaxis;
+        Vector2 force = new Vector2(speedModifier * horizontalInput * rb2d.mass, 0);
         rb2d.AddForce(force);
     }
+
     /// <summary>
     /// Jump by adding a force every FixedUpdate frames
     /// /// </summary>
@@ -209,6 +312,7 @@ public class Controller2D : MonoBehaviour
     {
         if (isJumping)
         {
+            jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
             //this is an counter that keep track of the time in air in every FixedUpdate frames (0.02s)
             //will be reset after landing
             jumpPhysicFrameCount++;
@@ -224,7 +328,6 @@ public class Controller2D : MonoBehaviour
             }
         }
     }
-
 
     /// <summary>
     /// The following 3 methods handle collision to ground with different normal so that the player knows what kind of wall(s)/ground(s) is colliding.

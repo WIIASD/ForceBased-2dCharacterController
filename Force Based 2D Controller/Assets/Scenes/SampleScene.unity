@@ -1444,15 +1444,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rayLength: 0.1
-  rayCount: 8
+  horizontalRayCount: 8
+  verticalRayCount: 8
   speedModifier: 120
   jumpStrength: 15
-  basicJumpStrength: 3
+  normalJumpInitialVelocity: 3
   timeToReachJumpApex: 0.2
-  wallJumpHorizontalStrength: 20
-  wallJumpVerticalStrength: 10
+  wallJumpHorizontalInitialVelocity: 20
+  wallJumpVerticalInitialVelocity: 3
   skinWidth: 0.02
   isGrounded: 0
+  isCeilinged: 0
+  isLeftWalled: 0
+  isRightWalled: 0
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 128

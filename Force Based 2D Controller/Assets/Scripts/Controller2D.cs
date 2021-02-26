@@ -68,46 +68,55 @@ public class Controller2D : MonoBehaviour
 
     private void CastHorizontalRays()
     {
+        int hittedRays = 0;
+        //cast rightward
         for (int i = 0; i < horizontalRayCount; i++)
         {
             Vector3 direction = Vector3.left;
             Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x, 
                                             raycastOrigins.TopLeft.y - i * horizontalRaySeperationDistance, raycastOrigins.TopLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
-            isLeftWalled = (hit && hit.normal.x > 0.8f) ? true : false;
+            hittedRays += (hit && hit.normal.x > 0.8f) ? 1 : 0; //If the ray hit a left wall, +1 to the hittedRays counter
             Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
         }
-
+        isLeftWalled = hittedRays > 0 ? true : false;
+        hittedRays = 0;
+        //cast leftward
         for (int i = 0; i < horizontalRayCount; i++)
         {
             Vector3 direction = Vector3.right;
             Vector3 newOrigin = new Vector3(raycastOrigins.TopRight.x,
                                             raycastOrigins.TopRight.y - i * horizontalRaySeperationDistance, raycastOrigins.TopRight.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
-            isRightWalled = (hit && hit.normal.x < -0.8f) ? true : false;
+            hittedRays += (hit && hit.normal.x < -0.8f) ? 1 : 0;
             Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
         }
+        isRightWalled = hittedRays > 0 ? true : false;
     }
     private void CastVerticalRays()
     {
+        int hittedRays = 0;
         //casting downwards
         for (int i = 0; i < verticalRayCount; i++)
         {
             Vector3 direcion = Vector3.down;
             Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * verticalRaySeperationDistance, raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
-            isGrounded = (hit && hit.normal.y > 0.5f) ? true : false;
+            hittedRays = (hit && hit.normal.y > 0.5f) ? 1 : 0;
             Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
         }
+        isGrounded = hittedRays > 0 ? true : false;
+        hittedRays = 0;
         //casting upwards
         for (int i = 0; i < verticalRayCount; i++)
         {
             Vector3 direcion = Vector3.up;
             Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance, raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
-            isCeilinged = (hit && hit.normal.y < -0.5f) ? true : false;
+            hittedRays += (hit && hit.normal.y < -0.5f) ? 1 : 0;
             Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
         }
+        isCeilinged = hittedRays > 0 ? true : false;
     }
 
     private void CalculateRaycastOrigins()
@@ -159,22 +168,22 @@ public class Controller2D : MonoBehaviour
     {
 
         if (!IsOnGround() && !IsWalledRight() && !IsWalledLeft())
-        {
+        {//before jump
             return;
-        }//before jump
+        }
 
         int wallJumpDirection = GetWallJumpDirection();
 
         if (wallJumpDirection == 0)
-        {
+        {//normal jump
             rb2d.velocity = new Vector2(rb2d.velocity.x, basicJumpStrength);
             isJumping = true;
-        }//normal jump
+        }
         else
-        {
+        {//wall jump
             rb2d.velocity = new Vector2(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalStrength, rb2d.velocity.y / 2 + wallJumpVerticalStrength);
             isJumping = true;
-        }//wall jump
+        }
 
     }
 

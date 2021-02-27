@@ -1443,20 +1443,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c34adcad87ee284d81b27a0e1faab1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gravityScale: 20
   rayLength: 0.1
   horizontalRayCount: 8
   verticalRayCount: 8
   speedModifier: 120
   jumpStrength: 15
+  wallJumpHorizontalStrength: 3
+  wallJumpVerticalStrength: 15
   normalJumpInitialVelocity: 3
   timeToReachJumpApex: 0.2
   wallJumpHorizontalInitialVelocity: 20
   wallJumpVerticalInitialVelocity: 3
+  wallSlideSpeedModifier: 4
+  wallSlideMaxVelocity: 5
   skinWidth: 0.02
   isGrounded: 0
   isCeilinged: 0
   isLeftWalled: 0
   isRightWalled: 0
+  wasGrounded: 0
+  wasCeilinged: 0
+  wasLeftWalled: 0
+  wasRightWalled: 0
   groundLayerMask:
     serializedVersion: 2
     m_Bits: 128

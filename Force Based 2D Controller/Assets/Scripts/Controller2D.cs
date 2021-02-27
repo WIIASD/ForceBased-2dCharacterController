@@ -15,15 +15,20 @@ public class Controller2D : MonoBehaviour
     {
         public Vector3 TopLeft, TopRight, BottomLeft, BottomRight;
     }
+    [SerializeField] private float gravityScale = 20;
     [SerializeField] private float rayLength = 0.1f;
     [SerializeField] private int horizontalRayCount = 8;
     [SerializeField] private int verticalRayCount = 8;
     [SerializeField] private float speedModifier = 3f;
     [SerializeField] private float jumpStrength = 15f;
+    [SerializeField] private float wallJumpHorizontalStrength = 5f;
+    [SerializeField] private float wallJumpVerticalStrength = 15f;
     [SerializeField] private float normalJumpInitialVelocity = 3f;
     [SerializeField] private float timeToReachJumpApex = 0.2f;
     [SerializeField] private float wallJumpHorizontalInitialVelocity = 4f;
     [SerializeField] private float wallJumpVerticalInitialVelocity = 10f;
+    [SerializeField] private float wallSlideSpeedModifier = 2f;
+    [SerializeField] private float wallSlideMaxVelocity = 3f;
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField] private bool isGrounded;
     [SerializeField] private bool isCeilinged;
@@ -41,7 +46,9 @@ public class Controller2D : MonoBehaviour
     private float verticalRaySeperationDistance;
     private int jumpPhysicFrameCount = 0;
     private float jumpW;
-    private bool isJumping;
+    private bool isNormalJumping;
+    private bool isWallJumping;
+    private int wallJumpDirection = 0;
     private bool apexReached;
     private Player player;
     private BoxCollider2D boxCollider;
@@ -53,7 +60,6 @@ public class Controller2D : MonoBehaviour
         boxCollider = GetComponent<BoxCollider2D>();
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
-        CalculateRaySperationDistance();
     }
 
     private void Update()
@@ -63,8 +69,37 @@ public class Controller2D : MonoBehaviour
 
     private void FixedUpdate()
     {
+        CalculateInAirGravity();
+        ApplyWallSildeGravity();
         HandleMove();
         HandleJump();
+    }
+
+    private void CalculateInAirGravity()
+    {
+        if (!isGrounded && !isLeftWalled && !isRightWalled)
+        {
+            rb2d.gravityScale = gravityScale;
+        }
+        else
+        {
+            rb2d.gravityScale = 0;
+        }
+    }
+
+    private void ApplyWallSildeGravity()
+    {
+        if (isLeftWalled || isRightWalled)
+        {
+            if (rb2d.velocity.y > -wallSlideMaxVelocity)
+            {
+                rb2d.velocity += new Vector2(0, -wallSlideSpeedModifier);
+            }
+            if (Mathf.Abs(rb2d.velocity.y) < 0.02f)
+            {
+                rb2d.velocity = new Vector2(rb2d.velocity.x, 0);
+            }
+        }
     }
 
     /// <summary>
@@ -73,6 +108,7 @@ public class Controller2D : MonoBehaviour
     private void CastRays()
     {
         CalculateRaycastOrigins();
+        CalculateRaySperationDistance();
         CastVerticalRays();
         CastHorizontalRays();
     }
@@ -269,18 +305,19 @@ public class Controller2D : MonoBehaviour
             return;
         }
 
-        int wallJumpDirection = GetWallJumpDirection();
+        int canWallJump = GetWallJumpDirection();
 
-        if (wallJumpDirection == 0)
+        if (canWallJump == 0)
         {//normal jump
             rb2d.velocity = new Vector3(rb2d.velocity.x, normalJumpInitialVelocity, 0);
-            isJumping = true;
+            isNormalJumping = true;
         }
         else
         {//wall jump
-            rb2d.velocity = new Vector3(rb2d.velocity.x + wallJumpDirection * wallJumpHorizontalInitialVelocity,
+            rb2d.velocity = new Vector3(rb2d.velocity.x + canWallJump * wallJumpHorizontalInitialVelocity,
                                         rb2d.velocity.y / 2 + wallJumpVerticalInitialVelocity, 0);
-            isJumping = true;
+            isWallJumping = true;
+            wallJumpDirection = canWallJump;
         }
 
     }
@@ -290,7 +327,9 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     public void StopJump()
     {
-        isJumping = false;
+        wallJumpDirection = 0;
+        isNormalJumping = false;
+        isWallJumping = false;
         apexReached = false;
         jumpPhysicFrameCount = 0;
     }
@@ -301,8 +340,11 @@ public class Controller2D : MonoBehaviour
     void HandleMove()
     {
         float horizontalInput = player.horaxis;
-        Vector2 force = new Vector2(speedModifier * horizontalInput * rb2d.mass, 0);
-        rb2d.AddForce(force);
+        if(Mathf.Abs(horizontalInput) > 0)
+        {
+            Vector2 force = new Vector2(speedModifier * horizontalInput * rb2d.mass, 0);
+            rb2d.AddForce(force);
+        }
     }
 
     /// <summary>
@@ -310,9 +352,9 @@ public class Controller2D : MonoBehaviour
     /// /// </summary>
     void HandleJump()
     {
-        if (isJumping)
+        jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
+        if (isNormalJumping)
         {
-            jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
             //this is an counter that keep track of the time in air in every FixedUpdate frames (0.02s)
             //will be reset after landing
             jumpPhysicFrameCount++;
@@ -327,93 +369,108 @@ public class Controller2D : MonoBehaviour
                 rb2d.velocity += new Vector2(0f, C * jumpStrength);
             }
         }
+        if (isWallJumping)
+        {
+            jumpPhysicFrameCount++;
+            float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
+            if (C < 0f)
+            {
+                apexReached = true;
+                StopJump();
+            }
+            else
+            {
+                rb2d.velocity += new Vector2(C * wallJumpHorizontalStrength * wallJumpDirection, C * wallJumpVerticalStrength);
+            }
+        }
     }
+
 
     /// <summary>
     /// The following 3 methods handle collision to ground with different normal so that the player knows what kind of wall(s)/ground(s) is colliding.
     /// I used arrays to store different gameobjects that are colliding with the player
     /// </summary>
     /// <param name="other"></param>
-    private void OnCollisionEnter2D(Collision2D other)
-    {
-        ContactPoint2D contactPoint = other.GetContact(0);
+    //private void OnCollisionEnter2D(Collision2D other)
+    //{
+    //    ContactPoint2D contactPoint = other.GetContact(0);
 
-        if (other.collider.CompareTag("Ground"))
-        {
+    //    if (other.collider.CompareTag("Ground"))
+    //    {
 
-            if (contactPoint.normal.y > 0.5f) //ground
-            {
-                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
-                colliderStandedOn.Add(contactPoint.collider);
-            }
+    //        if (contactPoint.normal.y > 0.5f) //ground
+    //        {
+    //            //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
+    //            colliderStandedOn.Add(contactPoint.collider);
+    //        }
 
-            if (contactPoint.normal.x > 0.8f)//left wall
-            {
-                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.green;
-                colliderWalledLeft.Add(contactPoint.collider);
-            }
+    //        if (contactPoint.normal.x > 0.8f)//left wall
+    //        {
+    //            //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.green;
+    //            colliderWalledLeft.Add(contactPoint.collider);
+    //        }
 
-            if (contactPoint.normal.x < -0.8f)//right wall
-            {
-                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.blue;
-                colliderWalledRight.Add(contactPoint.collider);
-            }
-        }
+    //        if (contactPoint.normal.x < -0.8f)//right wall
+    //        {
+    //            //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.blue;
+    //            colliderWalledRight.Add(contactPoint.collider);
+    //        }
+    //    }
 
-    }
+    //}
 
-    private void OnCollisionExit2D(Collision2D other)
-    {
+    //private void OnCollisionExit2D(Collision2D other)
+    //{
 
-        if (colliderStandedOn.Count > 0)
-        {
-            if (colliderStandedOn.Contains(other.collider))
-            {
-                //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
-                colliderStandedOn.Remove(other.collider);
-            }
-        }
+    //    if (colliderStandedOn.Count > 0)
+    //    {
+    //        if (colliderStandedOn.Contains(other.collider))
+    //        {
+    //            //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
+    //            colliderStandedOn.Remove(other.collider);
+    //        }
+    //    }
 
-        if (colliderWalledLeft.Count > 0)
-        {
-            if (colliderWalledLeft.Contains(other.collider))
-            {
-                //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
-                colliderWalledLeft.Remove(other.collider);
-            }
-        }
+    //    if (colliderWalledLeft.Count > 0)
+    //    {
+    //        if (colliderWalledLeft.Contains(other.collider))
+    //        {
+    //            //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
+    //            colliderWalledLeft.Remove(other.collider);
+    //        }
+    //    }
 
-        if (colliderWalledRight.Count > 0)
-        {
-            if (colliderWalledRight.Contains(other.collider))
-            {
-                //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
-                colliderWalledRight.Remove(other.collider);
-            }
-        }
+    //    if (colliderWalledRight.Count > 0)
+    //    {
+    //        if (colliderWalledRight.Contains(other.collider))
+    //        {
+    //            //other.collider.GetComponent<SpriteRenderer>().color = Color.white;
+    //            colliderWalledRight.Remove(other.collider);
+    //        }
+    //    }
 
-    }
+    //}
 
-    /// <summary>
-    /// To double check if there are unexpected colliders that the player is not colliding with in the collider arrays 
-    /// </summary>
-    /// <param name="other"></param>
-    private void OnCollisionStay2D(Collision2D other)
-    {
-        ContactPoint2D contactPoint = other.GetContact(0);
-        //Debug.Log(contactPoint.normal.y);
-        if (Mathf.Abs(contactPoint.normal.x) < 0.8 &&
-            (colliderWalledLeft.Contains(other.collider) || colliderWalledRight.Contains(other.collider)))
-        {
-            colliderWalledLeft.Remove(other.collider);
-            colliderWalledRight.Remove(other.collider);
-            if (contactPoint.normal.y > 0.5)
-            {
-                colliderStandedOn.Add(other.collider);
-                //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
-            }
-        }
-    }
+    ///// <summary>
+    ///// To double check if there are unexpected colliders that the player is not colliding with in the collider arrays 
+    ///// </summary>
+    ///// <param name="other"></param>
+    //private void OnCollisionStay2D(Collision2D other)
+    //{
+    //    ContactPoint2D contactPoint = other.GetContact(0);
+    //    //Debug.Log(contactPoint.normal.y);
+    //    if (Mathf.Abs(contactPoint.normal.x) < 0.8 &&
+    //        (colliderWalledLeft.Contains(other.collider) || colliderWalledRight.Contains(other.collider)))
+    //    {
+    //        colliderWalledLeft.Remove(other.collider);
+    //        colliderWalledRight.Remove(other.collider);
+    //        if (contactPoint.normal.y > 0.5)
+    //        {
+    //            colliderStandedOn.Add(other.collider);
+    //            //contactPoint.collider.GetComponent<SpriteRenderer>().color = Color.red;
+    //        }
+    //    }
+    //}
 
 
 }

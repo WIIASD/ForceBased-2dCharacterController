@@ -15,7 +15,12 @@ public class Controller2D : MonoBehaviour
     {
         public Vector3 TopLeft, TopRight, BottomLeft, BottomRight;
     }
+    [SerializeField] private bool usingGravity = true;
     [SerializeField] private float gravityScale = 20;
+    [SerializeField] private float groundHorizontalDrag = 13f;
+    [SerializeField] private float airHorizontalDrag = 13f;
+    [SerializeField] private float airVerticalDrag = 13f;
+    [SerializeField] private float wallVerticalDrag = 13f;
     [SerializeField] private float rayLength = 0.1f;
     [SerializeField] private int horizontalRayCount = 8;
     [SerializeField] private int verticalRayCount = 8;
@@ -54,7 +59,6 @@ public class Controller2D : MonoBehaviour
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
 
-
     private void Start()
     {
         boxCollider = GetComponent<BoxCollider2D>();
@@ -69,36 +73,83 @@ public class Controller2D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        CalculateInAirGravity();
-        ApplyWallSildeGravity();
+        ApplyGravity();
+        ApplyDrag();
         HandleMove();
         HandleJump();
     }
 
-    private void CalculateInAirGravity()
+    private void ApplyDrag()
+    {
+        ApplyGroundDrag();
+        ApplyAirDrag();
+        ApplyWallDrag();
+    }
+
+    private void ApplyGravity()
+    {
+        if (!usingGravity)
+        {
+            return;
+        }
+        ApplyInAirGravity();
+        ApplyWallSildeGravity();
+    }
+
+    private void ApplyInAirGravity()
     {
         if (!isGrounded && !isLeftWalled && !isRightWalled)
         {
-            rb2d.gravityScale = gravityScale;
-        }
-        else
-        {
-            rb2d.gravityScale = 0;
+            Vector2 g = new Vector2(0, rb2d.mass * -9.81f * gravityScale);
+            rb2d.AddForce(g);
         }
     }
 
     private void ApplyWallSildeGravity()
     {
+        if (isGrounded)
+        {
+            return;
+        }
         if (isLeftWalled || isRightWalled)
         {
             if (rb2d.velocity.y > -wallSlideMaxVelocity)
             {
+                //Vector2 force = new Vector2(0, -wallSlideSpeedModifier);
+                //rb2d.AddForce(force, ForceMode2D.Force);
                 rb2d.velocity += new Vector2(0, -wallSlideSpeedModifier);
             }
             if (Mathf.Abs(rb2d.velocity.y) < 0.02f)
             {
                 rb2d.velocity = new Vector2(rb2d.velocity.x, 0);
             }
+        }
+    }
+
+    private void ApplyAirDrag()
+    {
+        if (!isGrounded && !isLeftWalled && !isRightWalled)
+        {
+            Vector2 force = new Vector2(-airHorizontalDrag * rb2d.velocity.x, -airVerticalDrag * rb2d.velocity.y);
+            rb2d.AddForce(force);
+        }
+    }
+
+    private void ApplyGroundDrag()
+    {
+        if (isGrounded)
+        {
+            Vector2 force = new Vector2(-groundHorizontalDrag * rb2d.velocity.x, 0);
+            rb2d.AddForce(force);
+        }
+    }
+
+    private void ApplyWallDrag()
+    {
+        if (isLeftWalled || isRightWalled)
+        {
+            Vector2 force = new Vector2(0, -wallVerticalDrag * rb2d.velocity.y);
+            rb2d.AddForce(force);
         }
     }
 
@@ -126,7 +177,7 @@ public class Controller2D : MonoBehaviour
         for (int i = 0; i < horizontalRayCount; i++)
         {
             Vector3 direction = Vector3.left;
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x, 
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x,
                                             raycastOrigins.TopLeft.y - i * horizontalRaySeperationDistance, raycastOrigins.TopLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
             hittedRays += (hit && hit.normal.x > 0.8f) ? 1 : 0; //If the ray hit a left wall, +1 to the hittedRays counter
@@ -148,22 +199,7 @@ public class Controller2D : MonoBehaviour
         isRightWalled = hittedRays > 0 ? true : false;
 
         //Call corresponding events
-        if (!wasLeftWalled && isLeftWalled)
-        {
-            OnLeftWallEvent();
-        }
-        if (!wasRightWalled && isRightWalled)
-        {
-            OnRightWallEvent();
-        }
-        if (wasLeftWalled && !isLeftWalled)
-        {
-            LeftLeftWallEvent();
-        }
-        if(wasRightWalled && !isRightWalled)
-        {
-            LeftRightWallEvent();
-        }
+        CallOnLeftEvents();
     }
 
     /// <summary>
@@ -192,7 +228,7 @@ public class Controller2D : MonoBehaviour
         for (int i = 0; i < verticalRayCount; i++)
         {
             Vector3 direcion = Vector3.up;
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance, 
+            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance,
                                             raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
             RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
             hittedRays += (hit && hit.normal.y < -0.5f) ? 1 : 0;
@@ -201,21 +237,119 @@ public class Controller2D : MonoBehaviour
         isCeilinged = hittedRays > 0 ? true : false;
 
         //Call corresponding events
-        if (!wasGrounded && isGrounded)
+        CallOnLeftEvents();
+    }
+
+    /// <summary>
+    /// Return the direction of walljumping. 0 means cannot walljump, -1 means to the left, and 1 means to the right
+    /// </summary>
+    /// <returns></returns>
+    public int GetCurrentWallJumpDirection()
+    {
+        if (isGrounded)
         {
-            OnGroundEvent();
+            return 0;
         }
-        if (!wasCeilinged && isCeilinged)
+        if (isLeftWalled)
         {
-            OnCeilingEvent();
+            return 1;
         }
-        if(wasGrounded && !isGrounded)
+        if (isRightWalled)
         {
-            LeftGroundEvent();
+            return -1;
         }
-        if(wasCeilinged && !isCeilinged)
+        return 0;
+    }
+
+    /// <summary>
+    /// Check the jump condition, if canJump, preform a jump.
+    /// </summary>
+    public void Jump()
+    {
+
+        if (!isGrounded && !isRightWalled && !isLeftWalled)
+        {//before jump
+            return;
+        }
+
+        int currentWallJumpDirection = GetCurrentWallJumpDirection();
+
+        if (currentWallJumpDirection == 0)
+        {//normal jump
+            rb2d.velocity = new Vector3(rb2d.velocity.x, normalJumpInitialVelocity, 0);
+            isNormalJumping = true;
+        }
+        else
+        {//wall jump
+            rb2d.velocity = new Vector3(rb2d.velocity.x + currentWallJumpDirection * wallJumpHorizontalInitialVelocity,
+                                        rb2d.velocity.y / 2 + wallJumpVerticalInitialVelocity, 0);
+            isWallJumping = true;
+            wallJumpDirection = currentWallJumpDirection;
+        }
+
+    }
+
+    /// <summary>
+    /// Stop the jumping immediately in the mid-air
+    /// </summary>
+    public void StopJump()
+    {
+        wallJumpDirection = 0;
+        isNormalJumping = false;
+        isWallJumping = false;
+        apexReached = false;
+        jumpPhysicFrameCount = 0;
+    }
+
+    /// <summary>
+    /// move the player by adding a acceleration every FixedUpdate frames
+    /// </summary>
+    void HandleMove()
+    {
+        float horizontalInput = player.horaxis;
+        if (Mathf.Abs(horizontalInput) > 0)
         {
-            LeftCeilingEvent();
+            //Vector2 force = new Vector2(speedModifier * horizontalInput * rb2d.mass, 0);
+            //rb2d.AddForce(force);
+            rb2d.velocity += new Vector2(horizontalInput * speedModifier, 0);
+        }
+    }
+
+    /// <summary>
+    /// Jump by adding a acceleration every FixedUpdate frames
+    /// /// </summary>
+    void HandleJump()
+    {
+        jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
+        if (isNormalJumping)
+        {
+            //this is an counter that keep track of the time in air in every FixedUpdate frames (0.02s)
+            //will be reset after landing
+            jumpPhysicFrameCount++;
+            float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
+            if (C < 0f)
+            {
+                apexReached = true;
+                StopJump();
+            }
+            else
+            {
+                rb2d.velocity += new Vector2(0f, C * jumpStrength);
+            }
+        }
+        if (isWallJumping)
+        {
+            jumpPhysicFrameCount++;
+            float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
+            if (C < 0f)
+            {
+                apexReached = true;
+                StopJump();
+            }
+            else
+            {
+                rb2d.velocity += new Vector2(C * wallJumpHorizontalStrength * wallJumpDirection, C * wallJumpVerticalStrength);
+            }
         }
     }
 
@@ -231,6 +365,26 @@ public class Controller2D : MonoBehaviour
     {
         horizontalRaySeperationDistance = (boxCollider.bounds.size.y - skinWidth * 2) / (verticalRayCount - 1);
         verticalRaySeperationDistance = (boxCollider.bounds.size.x - skinWidth * 2) / (horizontalRayCount - 1);
+    }
+
+    private void CallOnLeftEvents()
+    {
+        if (!wasGrounded && isGrounded)
+        {
+            OnGroundEvent();
+        }
+        if (!wasCeilinged && isCeilinged)
+        {
+            OnCeilingEvent();
+        }
+        if (wasGrounded && !isGrounded)
+        {
+            LeftGroundEvent();
+        }
+        if (wasCeilinged && !isCeilinged)
+        {
+            LeftCeilingEvent();
+        }
     }
 
     private void OnGroundEvent()
@@ -274,119 +428,7 @@ public class Controller2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Return the direction of walljumping. 0 means cannot walljump, -1 means to the left, and 1 means to the right
-    /// </summary>
-    /// <returns></returns>
-    public int GetWallJumpDirection()
-    {
-        if (isGrounded)
-        {
-            return 0;
-        }
-        if (isLeftWalled)
-        {
-            return 1;
-        }
-        if (isRightWalled)
-        {
-            return -1;
-        }
-        return 0;
-    }
-
-    /// <summary>
-    /// Check the jump condition, if canJump, preform a jump.
-    /// </summary>
-    public void Jump()
-    {
-
-        if (!isGrounded && !isRightWalled && !isLeftWalled)
-        {//before jump
-            return;
-        }
-
-        int canWallJump = GetWallJumpDirection();
-
-        if (canWallJump == 0)
-        {//normal jump
-            rb2d.velocity = new Vector3(rb2d.velocity.x, normalJumpInitialVelocity, 0);
-            isNormalJumping = true;
-        }
-        else
-        {//wall jump
-            rb2d.velocity = new Vector3(rb2d.velocity.x + canWallJump * wallJumpHorizontalInitialVelocity,
-                                        rb2d.velocity.y / 2 + wallJumpVerticalInitialVelocity, 0);
-            isWallJumping = true;
-            wallJumpDirection = canWallJump;
-        }
-
-    }
-
-    /// <summary>
-    /// Stop the jumping immediately in the mid-air
-    /// </summary>
-    public void StopJump()
-    {
-        wallJumpDirection = 0;
-        isNormalJumping = false;
-        isWallJumping = false;
-        apexReached = false;
-        jumpPhysicFrameCount = 0;
-    }
-
-    /// <summary>
-    /// move the player by adding a force every FixedUpdate frames
-    /// </summary>
-    void HandleMove()
-    {
-        float horizontalInput = player.horaxis;
-        if(Mathf.Abs(horizontalInput) > 0)
-        {
-            Vector2 force = new Vector2(speedModifier * horizontalInput * rb2d.mass, 0);
-            rb2d.AddForce(force);
-        }
-    }
-
-    /// <summary>
-    /// Jump by adding a force every FixedUpdate frames
-    /// /// </summary>
-    void HandleJump()
-    {
-        jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
-        if (isNormalJumping)
-        {
-            //this is an counter that keep track of the time in air in every FixedUpdate frames (0.02s)
-            //will be reset after landing
-            jumpPhysicFrameCount++;
-            float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
-            if (C < 0f)
-            {
-                apexReached = true;
-                StopJump();
-            }
-            else
-            {
-                rb2d.velocity += new Vector2(0f, C * jumpStrength);
-            }
-        }
-        if (isWallJumping)
-        {
-            jumpPhysicFrameCount++;
-            float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
-            if (C < 0f)
-            {
-                apexReached = true;
-                StopJump();
-            }
-            else
-            {
-                rb2d.velocity += new Vector2(C * wallJumpHorizontalStrength * wallJumpDirection, C * wallJumpVerticalStrength);
-            }
-        }
-    }
-
-
-    /// <summary>
+    /// NOT USED ANYMORE!!
     /// The following 3 methods handle collision to ground with different normal so that the player knows what kind of wall(s)/ground(s) is colliding.
     /// I used arrays to store different gameobjects that are colliding with the player
     /// </summary>

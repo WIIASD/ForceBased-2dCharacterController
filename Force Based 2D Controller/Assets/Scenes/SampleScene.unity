@@ -1443,11 +1443,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c34adcad87ee284d81b27a0e1faab1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  usingGravity: 1
   gravityScale: 20
+  horizontalDrag: 13
+  verticalDrag: 13
+  wallVerticalDrag: 13
   rayLength: 0.1
   horizontalRayCount: 8
   verticalRayCount: 8
-  speedModifier: 120
+  speedModifier: 2.5
   jumpStrength: 15
   wallJumpHorizontalStrength: 3
   wallJumpVerticalStrength: 15
@@ -1485,9 +1489,9 @@ Rigidbody2D:
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
-  m_LinearDrag: 13
+  m_LinearDrag: 0
   m_AngularDrag: 0
-  m_GravityScale: 20
+  m_GravityScale: 0
   m_Material: {fileID: 6200000, guid: 960f5fb8fdae30643b3645e9a53092a5, type: 2}
   m_Interpolate: 0
   m_SleepingMode: 1

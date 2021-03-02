@@ -1445,16 +1445,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   usingGravity: 1
   gravityScale: 20
-  horizontalDrag: 13
-  verticalDrag: 13
+  groundHorizontalDrag: 13
+  airHorizontalDrag: 13
+  airVerticalDrag: 13
   wallVerticalDrag: 13
   rayLength: 0.1
   horizontalRayCount: 8
   verticalRayCount: 8
   speedModifier: 2.5
-  jumpStrength: 15
+  jumpStrength: 14
   wallJumpHorizontalStrength: 3
-  wallJumpVerticalStrength: 15
+  wallJumpVerticalStrength: 14
   normalJumpInitialVelocity: 3
   timeToReachJumpApex: 0.2
   wallJumpHorizontalInitialVelocity: 20

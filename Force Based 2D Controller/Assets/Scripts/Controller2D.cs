@@ -4,13 +4,16 @@ using UnityEngine;
 
 
 /// <summary>
-/// Learned from GDC: https://youtu.be/YDwp5tNCKso for the force calculation part
+/// Learned from GDC: https://youtu.be/YDwp5tNCKso for the jumping force calculation part
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Player))]
 public class Controller2D : MonoBehaviour
 {
+    /// <summary>
+    /// Handly struct to store the coordinates of each cornor of the collider with a certain skinwidth
+    /// </summary>
     public struct RaycastOrigins
     {
         public Vector3 TopLeft, TopRight, BottomLeft, BottomRight;
@@ -54,7 +57,7 @@ public class Controller2D : MonoBehaviour
     private bool isNormalJumping;
     private bool isWallJumping;
     private int wallJumpDirection = 0;
-    private bool apexReached;
+    private bool jumpApexReached;
     private Player player;
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
@@ -96,6 +99,9 @@ public class Controller2D : MonoBehaviour
         ApplyWallSildeGravity();
     }
 
+    /// <summary>
+    /// Gravity is calculated seperately while the player is in the mid air on lying on a wall
+    /// </summary>
     private void ApplyInAirGravity()
     {
         if (!isGrounded && !isLeftWalled && !isRightWalled)
@@ -166,6 +172,7 @@ public class Controller2D : MonoBehaviour
 
     /// <summary>
     /// Cast rays horizontally to check if the character is touching the left or the right wall
+    /// Then call the correspond events
     /// </summary>
     private void CastHorizontalRays()
     {
@@ -199,11 +206,12 @@ public class Controller2D : MonoBehaviour
         isRightWalled = hittedRays > 0 ? true : false;
 
         //Call corresponding events
-        CallOnLeftEvents();
+        CallOnLeftEventsHorizontal();
     }
 
     /// <summary>
     /// Cast rays vertically to check if the character is touching the ground or the ceiling
+    /// Then call the correspond events
     /// </summary>
     private void CastVerticalRays()
     {
@@ -237,7 +245,7 @@ public class Controller2D : MonoBehaviour
         isCeilinged = hittedRays > 0 ? true : false;
 
         //Call corresponding events
-        CallOnLeftEvents();
+        CallOnLeftEventsVertical();
     }
 
     /// <summary>
@@ -297,16 +305,16 @@ public class Controller2D : MonoBehaviour
         wallJumpDirection = 0;
         isNormalJumping = false;
         isWallJumping = false;
-        apexReached = false;
+        jumpApexReached = false;
         jumpPhysicFrameCount = 0;
     }
 
     /// <summary>
     /// move the player by adding a acceleration every FixedUpdate frames
     /// </summary>
-    void HandleMove()
+    private void HandleMove()
     {
-        float horizontalInput = player.horaxis;
+        float horizontalInput = player.Horaxis;
         if (Mathf.Abs(horizontalInput) > 0)
         {
             //Vector2 force = new Vector2(speedModifier * horizontalInput * rb2d.mass, 0);
@@ -318,7 +326,7 @@ public class Controller2D : MonoBehaviour
     /// <summary>
     /// Jump by adding a acceleration every FixedUpdate frames
     /// /// </summary>
-    void HandleJump()
+    private void HandleJump()
     {
         jumpW = (Mathf.PI / 2) / (timeToReachJumpApex / 0.02f); // Calculate jumpW based on timeToReachApex
         if (isNormalJumping)
@@ -329,7 +337,7 @@ public class Controller2D : MonoBehaviour
             float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
             if (C < 0f)
             {
-                apexReached = true;
+                jumpApexReached = true;
                 StopJump();
             }
             else
@@ -343,7 +351,7 @@ public class Controller2D : MonoBehaviour
             float C = Mathf.Cos(jumpW * jumpPhysicFrameCount);
             if (C < 0f)
             {
-                apexReached = true;
+                jumpApexReached = true;
                 StopJump();
             }
             else
@@ -361,14 +369,21 @@ public class Controller2D : MonoBehaviour
         raycastOrigins.BottomRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
     }
 
+    /// <summary>
+    /// Calculate how far each raycast need to be from each other to cover the whole side of the player
+    /// </summary>
     private void CalculateRaySperationDistance()
     {
         horizontalRaySeperationDistance = (boxCollider.bounds.size.y - skinWidth * 2) / (verticalRayCount - 1);
         verticalRaySeperationDistance = (boxCollider.bounds.size.x - skinWidth * 2) / (horizontalRayCount - 1);
     }
 
-    private void CallOnLeftEvents()
+    /// <summary>
+    /// Call one of the method in the ON/LEFT region when the player on/left ground/ceiling
+    /// </summary>
+    private void CallOnLeftEventsVertical()
     {
+        //On events
         if (!wasGrounded && isGrounded)
         {
             OnGroundEvent();
@@ -377,6 +392,7 @@ public class Controller2D : MonoBehaviour
         {
             OnCeilingEvent();
         }
+        //Left events
         if (wasGrounded && !isGrounded)
         {
             LeftGroundEvent();
@@ -386,6 +402,33 @@ public class Controller2D : MonoBehaviour
             LeftCeilingEvent();
         }
     }
+
+    /// <summary>
+    /// Call one of the method in the ON/LEFT region when the player on/left left wall/right wall
+    /// </summary>
+    private void CallOnLeftEventsHorizontal()
+    {
+        //On events
+        if (!wasLeftWalled && isLeftWalled)
+        {
+            OnLeftWallEvent();
+        }
+        if (!wasRightWalled && isRightWalled)
+        {
+            OnRightWallEvent();
+        }
+        //Left events
+        if (wasLeftWalled && !isLeftWalled)
+        {
+            LeftLeftWallEvent();
+        }
+        if (wasRightWalled && !isRightWalled)
+        {
+            LeftRightWallEvent();
+        }
+    }
+
+    #region ON/LEFT: Methods that are going to be called whenever the player: (Touches/left) (Ground/Ceiling/Left Wall/Right Wall)
 
     private void OnGroundEvent()
     {
@@ -426,6 +469,8 @@ public class Controller2D : MonoBehaviour
     {
         Debug.Log("Left Right Wall!!");
     }
+
+    #endregion
 
     /// <summary>
     /// NOT USED ANYMORE!!

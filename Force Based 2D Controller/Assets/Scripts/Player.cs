@@ -6,9 +6,9 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     private Controller2D controller2D;
-    public bool jumpPressed {get; private set;}
-    public bool jumpReleased {get; private set;}
-    public float horaxis{get; private set;}
+    public bool JumpPressed {get; private set;}
+    public bool JumpReleased {get; private set;}
+    public float Horaxis{get; private set;}
 
     private void Start() {
         controller2D = GetComponent<Controller2D>();
@@ -23,19 +23,19 @@ public class Player : MonoBehaviour
     /// </summary>
     void updateInput()
     {
-        horaxis = Input.GetAxisRaw("Horizontal");
+        Horaxis = Input.GetAxisRaw("Horizontal");
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
             controller2D.Jump();
-            jumpPressed = true;
-            jumpReleased = false;
+            JumpPressed = true;
+            JumpReleased = false;
         }
         if (Input.GetKeyUp(KeyCode.Space))
         {
             controller2D.StopJump();
-            jumpPressed = false;
-            jumpReleased = true;
+            JumpPressed = false;
+            JumpReleased = true;
         }
     }
 

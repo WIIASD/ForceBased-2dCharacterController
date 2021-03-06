@@ -35,6 +35,7 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private float timeToReachJumpApex = 0.2f;
     [SerializeField] private float wallJumpHorizontalInitialVelocity = 4f;
     [SerializeField] private float wallJumpVerticalInitialVelocity = 10f;
+    [SerializeField] private float jumpRegisteredTimeFrame = 0.2f;
     [SerializeField] private float wallSlideSpeedModifier = 2f;
     [SerializeField] private float wallSlideMaxVelocity = 3f;
     [SerializeField] private float skinWidth = 0.02f;
@@ -58,6 +59,8 @@ public class Controller2D : MonoBehaviour
     private bool isWallJumping;
     private int wallJumpDirection = 0;
     private bool jumpApexReached;
+    private bool jumpRegistered;
+    private float jumpRegisteredTimeFrameCount;
     private Player player;
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
@@ -67,10 +70,20 @@ public class Controller2D : MonoBehaviour
         boxCollider = GetComponent<BoxCollider2D>();
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
+        jumpRegisteredTimeFrameCount = jumpRegisteredTimeFrame;
     }
 
     private void Update()
     {
+        if (jumpRegistered)
+        {
+            jumpRegisteredTimeFrameCount -= Time.deltaTime;
+        }
+        if (jumpRegisteredTimeFrameCount < 0)
+        {
+            jumpRegistered = false;
+            jumpRegisteredTimeFrameCount = jumpRegisteredTimeFrame;
+        }
         CastRays();
     }
 
@@ -274,7 +287,7 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     public void Jump()
     {
-
+        jumpRegistered = true;
         if (!isGrounded && !isRightWalled && !isLeftWalled)
         {//before jump
             return;
@@ -433,6 +446,7 @@ public class Controller2D : MonoBehaviour
     private void OnGroundEvent()
     {
         Debug.Log("Grounded!!");
+        onJumpable();
     }
 
     private void LeftGroundEvent()
@@ -453,6 +467,7 @@ public class Controller2D : MonoBehaviour
     private void OnLeftWallEvent()
     {
         Debug.Log("LeftWalled!!");
+        onJumpable();
     }
 
     private void LeftLeftWallEvent()
@@ -463,11 +478,20 @@ public class Controller2D : MonoBehaviour
     private void OnRightWallEvent()
     {
         Debug.Log("RightWalled!!");
+        onJumpable();
     }
 
     private void LeftRightWallEvent()
     {
         Debug.Log("Left Right Wall!!");
+    }
+
+    private void onJumpable()
+    {
+        if (jumpRegistered)
+        {
+            Jump();
+        }
     }
 
     #endregion

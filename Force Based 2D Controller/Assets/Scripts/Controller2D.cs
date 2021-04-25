@@ -4,11 +4,12 @@ using UnityEngine;
 
 
 /// <summary>
-/// Learned from GDC: https://youtu.be/YDwp5tNCKso for the jumping force calculation part
+/// Learned from https://youtu.be/YDwp5tNCKso for the jumping force calculation part
 /// </summary>
 [RequireComponent(typeof(BoxCollider2D))]
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Player))]
+
 public class Controller2D : MonoBehaviour
 {
     /// <summary>
@@ -36,6 +37,7 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private float wallJumpHorizontalInitialVelocity = 4f;
     [SerializeField] private float wallJumpVerticalInitialVelocity = 10f;
     [SerializeField] private float jumpBufferTime = 0.2f;
+    [SerializeField] private float coyoteJumpTime = 0.2f;
     [SerializeField] private float wallSlideSpeedModifier = 2f;
     [SerializeField] private float wallSlideMaxVelocity = 3f;
     [SerializeField] private float skinWidth = 0.02f;
@@ -43,6 +45,8 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private bool isCeilinged;
     [SerializeField] private bool isLeftWalled;
     [SerializeField] private bool isRightWalled;
+    [SerializeField] private bool isNormalJumping;
+    [SerializeField] private bool isWallJumping;
     [SerializeField] private bool wasGrounded;
     [SerializeField] private bool wasCeilinged;
     [SerializeField] private bool wasLeftWalled;
@@ -55,12 +59,12 @@ public class Controller2D : MonoBehaviour
     private float verticalRaySeperationDistance;
     private int jumpPhysicFrameCount = 0;
     private float jumpW;
-    private bool isNormalJumping;
-    private bool isWallJumping;
     private int wallJumpDirection = 0;
     private bool jumpApexReached;
     private bool jumpRegisteredInAir;
+    private bool isInCoyoteTime;
     private ATimer jumpBufferTimer;
+    private ATimer coyoteJumpTimer;
     private Player player;
     private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
@@ -70,8 +74,13 @@ public class Controller2D : MonoBehaviour
         boxCollider = GetComponent<BoxCollider2D>();
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
-        jumpBufferTimer = new ATimer(jumpBufferTime, (a,e)=> {
+        jumpBufferTimer = new ATimer(jumpBufferTime, (a,e) => 
+        {
             jumpRegisteredInAir = false; 
+        });
+        coyoteJumpTimer = new ATimer(coyoteJumpTime, (a, e) => 
+        { 
+            isInCoyoteTime = false; 
         });
     }
 
@@ -280,7 +289,7 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     public void Jump()
     {
-        if (!isGrounded && !isRightWalled && !isLeftWalled)
+        if (!isGrounded && !isRightWalled && !isLeftWalled && !isInCoyoteTime)
         {//before jump
             jumpRegisteredInAir = true;
             jumpBufferTimer.StartTimer();
@@ -446,6 +455,11 @@ public class Controller2D : MonoBehaviour
     private void LeftGroundEvent()
     {
         Debug.Log("Left Ground!!");
+        if (!isNormalJumping)
+        {
+            isInCoyoteTime = true;
+            coyoteJumpTimer.StartTimer();
+        }
     }
 
     private void OnCeilingEvent()

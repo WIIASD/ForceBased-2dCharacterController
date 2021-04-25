@@ -1,24 +1,31 @@
 using System;
-using System.Threading;
+using System.Timers;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class ATimer
 {
-    private static int PhysicsFramesToMS(int physicsFrames)
+    private float time;
+    private Action toDo;
+    private ElapsedEventHandler callBack;
+    private Timer t;
+    public ATimer(float time, ElapsedEventHandler callBack)
     {
-        return (int)(((float)physicsFrames * 0.02f) * 1000f);
-    }
-    public static void StartPhysicFrameTimer(int physicFrames, TimerCallback callBack)
-    {
-        Timer t = new Timer(callBack);
-        t.Change(PhysicsFramesToMS(physicFrames), 0);
+        this.time = time;
+        this.callBack = callBack;
+        t = new Timer(time * 1000);
+        t.Elapsed += callBack;
+        t.Elapsed += EndTimer;
     }
 
-    public static void StartTimer(int seconds, TimerCallback callBack)
+    public void StartTimer()
     {
-        Timer t = new Timer(callBack);
-        t.Change(seconds * 1000, 0);
+        t.Start();
+    }
+
+    public void EndTimer(object sender, ElapsedEventArgs e)
+    {
+        t.Stop();
     }
 }

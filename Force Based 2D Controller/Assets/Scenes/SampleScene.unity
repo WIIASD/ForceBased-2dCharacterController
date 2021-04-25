@@ -1656,8 +1656,7 @@ MonoBehaviour:
   timeToReachJumpApex: 0.2
   wallJumpHorizontalInitialVelocity: 20
   wallJumpVerticalInitialVelocity: 3
-  jumpBuffer: 0.1
-  preJumpBuffer: 0.1
+  jumpBufferTime: 0.1
   wallSlideSpeedModifier: 4
   wallSlideMaxVelocity: 5
   skinWidth: 0.02

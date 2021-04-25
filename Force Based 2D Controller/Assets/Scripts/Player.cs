@@ -15,13 +15,13 @@ public class Player : MonoBehaviour
     }
     private void Update()
     {
-        updateInput();
+        UpdateInput();
     }
 
     /// <summary>
     /// Update input from player every frame
     /// </summary>
-    void updateInput()
+    void UpdateInput()
     {
         Horaxis = Input.GetAxisRaw("Horizontal");
 

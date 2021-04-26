@@ -1,5 +1,11 @@
-# ForceBased-2dCharacterController in Unity
+# ForceBased-2dCharacterController in Unity 2020.2.6f1
 
-This is my implementation of what I have learned from this DevGamm video: https://youtu.be/YDwp5tNCKso
+The jump implementation was learned from this DevGamm video: https://youtu.be/YDwp5tNCKso
 
-Also I made some changes to fit what I need for a 2DCharacterController (ex. I used raycast to do ground check and wall check rather than calling the OnCollision methods)
+#Just a Basic 2D platformer controller with:
+  -Customizable Raycast component to check collision with ground, walls, and ceiling
+  -Wall jumping, wall sliding
+  -Controllable jump height
+  -JumpBuffering and CoyoteTime
+  -Adjustable air drag and friction
+  

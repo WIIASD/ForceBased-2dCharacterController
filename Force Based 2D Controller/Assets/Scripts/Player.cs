@@ -13,6 +13,7 @@ public class Player : MonoBehaviour
     private void Start() {
         controller2D = GetComponent<Controller2D>();
     }
+
     private void Update()
     {
         UpdateInput();
@@ -27,6 +28,8 @@ public class Player : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
+            /*CoroutineTimer timer = new CoroutineTimer(1.5f, () => { Debug.Log("asdfasdfasdf"); });
+            timer.StartTimer(this);*/
             controller2D.Jump();
             JumpPressed = true;
             JumpReleased = false;

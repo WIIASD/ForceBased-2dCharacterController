@@ -1656,7 +1656,8 @@ MonoBehaviour:
   timeToReachJumpApex: 0.2
   wallJumpHorizontalInitialVelocity: 20
   wallJumpVerticalInitialVelocity: 3
-  jumpBufferTime: 0.1
+  jumpBufferTime: 0.2
+  coyoteJumpTime: 0.1
   wallSlideSpeedModifier: 4
   wallSlideMaxVelocity: 5
   skinWidth: 0.02
@@ -1664,6 +1665,8 @@ MonoBehaviour:
   isCeilinged: 0
   isLeftWalled: 0
   isRightWalled: 0
+  isNormalJumping: 0
+  isWallJumping: 0
   wasGrounded: 0
   wasCeilinged: 0
   wasLeftWalled: 0

@@ -5,29 +5,19 @@ using UnityEngine;
 
 /// <summary>
 /// Learned from https://youtu.be/YDwp5tNCKso for the jumping force calculation part
-/// </summary>
-[RequireComponent(typeof(BoxCollider2D))]
+/// </summary
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Player))]
 
 public class Controller2D : MonoBehaviour
 {
-    /// <summary>
-    /// Handly struct to store the coordinates of each cornor of the collider with a certain skinwidth
-    /// </summary>
-    public struct RaycastOrigins
-    {
-        public Vector3 TopLeft, TopRight, BottomLeft, BottomRight;
-    }
+
     [SerializeField] private bool usingGravity = true;
     [SerializeField] private float gravityScale = 20;
     [SerializeField] private float groundHorizontalDrag = 13f;
     [SerializeField] private float airHorizontalDrag = 13f;
     [SerializeField] private float airVerticalDrag = 13f;
     [SerializeField] private float wallVerticalDrag = 13f;
-    [SerializeField] private float rayLength = 0.1f;
-    [SerializeField] private int horizontalRayCount = 8;
-    [SerializeField] private int verticalRayCount = 8;
     [SerializeField] private float speedModifier = 3f;
     [SerializeField] private float jumpStrength = 15f;
     [SerializeField] private float wallJumpHorizontalStrength = 5f;
@@ -40,7 +30,6 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private float coyoteJumpTime = 0.2f;
     [SerializeField] private float wallSlideSpeedModifier = 2f;
     [SerializeField] private float wallSlideMaxVelocity = 3f;
-    [SerializeField] private float skinWidth = 0.02f;
     [SerializeField] private bool isGrounded;
     [SerializeField] private bool isCeilinged;
     [SerializeField] private bool isLeftWalled;
@@ -51,12 +40,9 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private bool wasCeilinged;
     [SerializeField] private bool wasLeftWalled;
     [SerializeField] private bool wasRightWalled;
-    [SerializeField] private LayerMask groundLayerMask;
     [SerializeField] private List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
-    private RaycastOrigins raycastOrigins;
-    private float horizontalRaySeperationDistance;
-    private float verticalRaySeperationDistance;
+    private BoxColliderRayCastManager rayCastManager;
     private int jumpPhysicFrameCount = 0;
     private float jumpW;
     private int wallJumpDirection = 0;
@@ -66,21 +52,20 @@ public class Controller2D : MonoBehaviour
     private ATimer jumpBufferTimer;
     private ATimer coyoteJumpTimer;
     private Player player;
-    private BoxCollider2D boxCollider;
     private Rigidbody2D rb2d;
 
     private void Start()
     {
-        boxCollider = GetComponent<BoxCollider2D>();
         rb2d = GetComponent<Rigidbody2D>();
         player = GetComponent<Player>();
+        rayCastManager = GetComponent<BoxColliderRayCastManager>();
         jumpBufferTimer = new ATimer(jumpBufferTime, (a,e) => 
         {
-            jumpRegisteredInAir = false; 
+            jumpRegisteredInAir = false;
         });
         coyoteJumpTimer = new ATimer(coyoteJumpTime, (a, e) => 
         { 
-            isInCoyoteTime = false; 
+            isInCoyoteTime = false;
         });
     }
 
@@ -179,87 +164,16 @@ public class Controller2D : MonoBehaviour
     /// </summary>
     private void CastRays()
     {
-        CalculateRaycastOrigins();
-        CalculateRaySperationDistance();
-        CastVerticalRays();
-        CastHorizontalRays();
-    }
-
-    /// <summary>
-    /// Cast rays horizontally to check if the character is touching the left or the right wall
-    /// Then call the correspond events
-    /// </summary>
-    private void CastHorizontalRays()
-    {
-        int hittedRays = 0;
+        BoxColliderRayCastResult result = rayCastManager.getResult();
         wasLeftWalled = isLeftWalled;
         wasRightWalled = isRightWalled;
-
-        //cast leftward
-        for (int i = 0; i < horizontalRayCount; i++)
-        {
-            Vector3 direction = Vector3.left;
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x,
-                                            raycastOrigins.TopLeft.y - i * horizontalRaySeperationDistance, raycastOrigins.TopLeft.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
-            hittedRays += (hit && hit.normal.x > 0.8f) ? 1 : 0; //If the ray hit a left wall, +1 to the hittedRays counter
-            Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
-        }
-        isLeftWalled = hittedRays > 0 ? true : false;
-        hittedRays = 0;
-
-        //cast rightward
-        for (int i = 0; i < horizontalRayCount; i++)
-        {
-            Vector3 direction = Vector3.right;
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopRight.x,
-                                            raycastOrigins.TopRight.y - i * horizontalRaySeperationDistance, raycastOrigins.TopRight.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direction, rayLength + skinWidth, groundLayerMask);
-            hittedRays += (hit && hit.normal.x < -0.8f) ? 1 : 0;
-            Debug.DrawRay(newOrigin, direction * (rayLength + skinWidth), Color.green);
-        }
-        isRightWalled = hittedRays > 0 ? true : false;
-
-        //Call corresponding events
-        CallOnLeftEventsHorizontal();
-    }
-
-    /// <summary>
-    /// Cast rays vertically to check if the character is touching the ground or the ceiling
-    /// Then call the correspond events
-    /// </summary>
-    private void CastVerticalRays()
-    {
-        int hittedRays = 0;
-        wasGrounded = isGrounded;
         wasCeilinged = isCeilinged;
-
-        //casting downwards
-        for (int i = 0; i < verticalRayCount; i++)
-        {
-            Vector3 direcion = Vector3.down;
-            Vector3 newOrigin = new Vector3(raycastOrigins.BottomLeft.x + i * verticalRaySeperationDistance,
-                                            raycastOrigins.BottomLeft.y, raycastOrigins.BottomLeft.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
-            hittedRays += (hit && hit.normal.y > 0.5f) ? 1 : 0;
-            Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
-        }
-        isGrounded = hittedRays > 0 ? true : false;
-        hittedRays = 0;
-
-        //casting upwards
-        for (int i = 0; i < verticalRayCount; i++)
-        {
-            Vector3 direcion = Vector3.up;
-            Vector3 newOrigin = new Vector3(raycastOrigins.TopLeft.x + i * verticalRaySeperationDistance,
-                                            raycastOrigins.TopLeft.y, raycastOrigins.TopLeft.z);
-            RaycastHit2D hit = Physics2D.Raycast(newOrigin, direcion, rayLength + skinWidth, groundLayerMask);
-            hittedRays += (hit && hit.normal.y < -0.5f) ? 1 : 0;
-            Debug.DrawRay(newOrigin, direcion * (rayLength + skinWidth), Color.green);
-        }
-        isCeilinged = hittedRays > 0 ? true : false;
-
-        //Call corresponding events
+        wasGrounded = isGrounded;
+        isLeftWalled = result.leftHits > 0 ? true : false;
+        isRightWalled = result.rightHits > 0 ? true : false;
+        isCeilinged = result.upHits > 0 ? true : false;
+        isGrounded = result.downHits > 0 ? true : false;
+        CallOnLeftEventsHorizontal();
         CallOnLeftEventsVertical();
     }
 
@@ -375,23 +289,6 @@ public class Controller2D : MonoBehaviour
                 rb2d.velocity += new Vector2(C * wallJumpHorizontalStrength * wallJumpDirection, C * wallJumpVerticalStrength);
             }
         }
-    }
-
-    private void CalculateRaycastOrigins()
-    {
-        raycastOrigins.TopLeft = new Vector3(boxCollider.bounds.min.x + skinWidth, boxCollider.bounds.max.y - skinWidth, 0);
-        raycastOrigins.TopRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.max.y - skinWidth, 0);
-        raycastOrigins.BottomLeft = new Vector3(boxCollider.bounds.min.x + skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
-        raycastOrigins.BottomRight = new Vector3(boxCollider.bounds.max.x - skinWidth, boxCollider.bounds.min.y + skinWidth, 0);
-    }
-
-    /// <summary>
-    /// Calculate how far each raycast need to be from each other to cover the whole side of the player
-    /// </summary>
-    private void CalculateRaySperationDistance()
-    {
-        horizontalRaySeperationDistance = (boxCollider.bounds.size.y - skinWidth * 2) / (verticalRayCount - 1);
-        verticalRaySeperationDistance = (boxCollider.bounds.size.x - skinWidth * 2) / (horizontalRayCount - 1);
     }
 
     /// <summary>

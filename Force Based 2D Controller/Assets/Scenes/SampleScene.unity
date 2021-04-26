@@ -1618,8 +1618,9 @@ GameObject:
   - component: {fileID: 1892216689}
   - component: {fileID: 1892216688}
   - component: {fileID: 1892216687}
-  - component: {fileID: 1892216686}
   - component: {fileID: 1892216691}
+  - component: {fileID: 1892216686}
+  - component: {fileID: 1892216692}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -1645,9 +1646,6 @@ MonoBehaviour:
   airHorizontalDrag: 13
   airVerticalDrag: 13
   wallVerticalDrag: 13
-  rayLength: 0.1
-  horizontalRayCount: 8
-  verticalRayCount: 8
   speedModifier: 2.5
   jumpStrength: 14
   wallJumpHorizontalStrength: 3
@@ -1656,11 +1654,10 @@ MonoBehaviour:
   timeToReachJumpApex: 0.2
   wallJumpHorizontalInitialVelocity: 20
   wallJumpVerticalInitialVelocity: 3
-  jumpBufferTime: 0.2
+  jumpBufferTime: 0.15
   coyoteJumpTime: 0.1
   wallSlideSpeedModifier: 4
   wallSlideMaxVelocity: 5
-  skinWidth: 0.02
   isGrounded: 0
   isCeilinged: 0
   isLeftWalled: 0
@@ -1671,12 +1668,6 @@ MonoBehaviour:
   wasCeilinged: 0
   wasLeftWalled: 0
   wasRightWalled: 0
-  groundLayerMask:
-    serializedVersion: 2
-    m_Bits: 128
-  colliderWalledLeft: []
-  colliderStandedOn: []
-  colliderWalledRight: []
 --- !u!50 &1892216687
 Rigidbody2D:
   serializedVersion: 4
@@ -1801,6 +1792,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f7dfb828d1cf334eaed42cf9bb77272, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1892216692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1892216685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 701696d95949c6e48abec78741c6b6ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  up: 0
+  down: 1
+  left: 1
+  right: 1
+  rayLength: 0.1
+  horizontalRayCount: 4
+  verticalRayCount: 4
+  skinWidth: 0.02
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 128
 --- !u!1 &1907515450
 GameObject:
   m_ObjectHideFlags: 0

@@ -40,7 +40,6 @@ public class Controller2D : MonoBehaviour
     [SerializeField] private bool wasCeilinged;
     [SerializeField] private bool wasLeftWalled;
     [SerializeField] private bool wasRightWalled;
-    [SerializeField] private List<Collider2D> colliderWalledLeft, colliderStandedOn, colliderWalledRight = new List<Collider2D>();
 
     private BoxColliderRayCastManager rayCastManager;
     private int jumpPhysicFrameCount = 0;

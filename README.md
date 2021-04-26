@@ -2,10 +2,10 @@
 
 The jump implementation was learned from this DevGamm video: https://youtu.be/YDwp5tNCKso
 
-#Just a Basic 2D platformer controller with:
-  -Customizable Raycast component to check collision with ground, walls, and ceiling
-  -Wall jumping, wall sliding
-  -Controllable jump height
-  -JumpBuffering and CoyoteTime
-  -Adjustable air drag and friction
+# Just a Basic 2D platformer controller with:
+  - Customizable Raycast component to check collision with ground, walls, and ceiling
+  - Wall jumping, wall sliding
+  - Controllable jump height
+  - JumpBuffering and CoyoteTime
+  - Adjustable air drag and friction
   
